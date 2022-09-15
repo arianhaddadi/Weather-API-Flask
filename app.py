@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+import exceptions
 import json
 import hashlib
 import jwt
@@ -19,6 +20,21 @@ app.config["SQLALCHEMY_DATABASE_URI"] = f"postgresql://{username}:{password}@loc
 
 db = SQLAlchemy(app)
 
+def authorize(request):
+    username = request.args.get("username")
+    token = request.headers.environ.get("HTTP_AUTHORIZATION")
+    if username is None or token is None:
+        raise exceptions.BadRequest
+
+    token = token.split()[1]
+    token_decoded = jwt.decode(token, "weath", algorithms=["HS256"])
+    if username != token_decoded["username"]:
+        raise jwt.exceptions.InvalidTokenError
+
+    user = User.query.filter_by(username=username).first()
+    if user is None or token_decoded["password"] != user.password:
+        raise jwt.exceptions.InvalidTokenError
+    return user
 
 class User(db.Model):
     username = db.Column(db.String, primary_key=True)
@@ -26,7 +42,7 @@ class User(db.Model):
     country = db.Column(db.String, nullable=False)
     city = db.Column(db.String, nullable=False)
 
-# Signup
+
 @app.route("/user", methods=['POST'])
 def add_user():
     username = request.form["username"]
@@ -56,11 +72,33 @@ def login():
     else:
         payload = {
             "username": username,
+            "password": password,
             "exp": datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(minutes=20)
         }
         key = "weath"
         token = jwt.encode(payload, key)
         return jsonify(success=True, status_code=200, message="Successfully Logged In!", jwt_token=token)
+
+
+# Update Location
+@app.route("/user", methods=['PUT'])
+def update_location():
+    try:
+        user = authorize(request)
+        new_city = request.form.get("city")
+        new_country = request.form.get("country")
+        if new_country is not None:
+            user.country = new_country
+        if new_city is not None:
+            user.city = new_city
+        db.session.commit()
+        return jsonify(success=False, status_code=200, message="Update Was Successful!")
+    except jwt.exceptions.ExpiredSignatureError:
+        return jsonify(success=False, status_code=401, message="Token Expired! Please Login Again!")
+    except jwt.exceptions.InvalidTokenError:
+        return jsonify(success=False, status_code=401, message="Token Invalid!")
+    except exceptions.BadRequest:
+        return jsonify(success=False, status_code=400, message="Bad Request! Check The Request Data!")
 
 
 if __name__ == "__main__":
