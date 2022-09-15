@@ -1,0 +1,7 @@
+test*
+venv
+*.md
+.idea
+
+
+!README.md
