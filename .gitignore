@@ -3,6 +3,7 @@ venv
 *.md
 .idea
 __pycache__
+*.sql
 
 
 !README.md
