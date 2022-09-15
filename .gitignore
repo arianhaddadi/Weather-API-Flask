@@ -2,6 +2,7 @@ test*
 venv
 *.md
 .idea
+__pycache__
 
 
 !README.md
