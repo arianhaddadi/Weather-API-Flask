@@ -72,11 +72,12 @@ class User(db.Model):
     username = db.Column(db.String, primary_key=True)
     password = db.Column(db.String, nullable=False)
     country = db.Column(db.String, nullable=False)
+    province = db.Column(db.String, nullable=False)
     city = db.Column(db.String, nullable=False)
 
 
 @app.route("/user", methods=['POST'])
-@validate_form("username", "password", "country", "city")
+@validate_form("username", "password", "country", "city", "province")
 def add_user():
     username = request.form["username"]
     password = hashlib.sha256(request.form["password"].encode()).hexdigest()
@@ -118,9 +119,13 @@ def login():
 @authorize
 def update_location(user):
     new_city = request.form.get("city")
+    new_province = request.form.get("province")
     new_country = request.form.get("country")
+
     if new_country is not None:
         user.country = new_country
+    if new_province is not None:
+        user.province = new_province
     if new_city is not None:
         user.city = new_city
 
