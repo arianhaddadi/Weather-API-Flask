@@ -1,5 +1,5 @@
 {
     "username": "postgres",
-    "password": "kex5rdmx",
+    "password": "postgres",
     "db_name": "weatherapp"
 }
