@@ -86,12 +86,13 @@ def add_user():
     password = hashlib.sha256(request.form["password"].encode()).hexdigest()
     country = request.form["country"]
     city = request.form["city"]
-    new_user = User(username=username, password=password, country=country, city=city)
+    province = request.form["province"]
+    new_user = User(username=username, password=password, country=country, province=province, city=city)
     db.session.add(new_user)
     try:
         db.session.commit()
         return jsonify(success=True, status_code=200, message="Successfully Signed Up!")
-    except sqlalchemy.exc.IntegrityError:
+    except sqlalchemy.exc.IntegrityError as e:
         return jsonify(success=False, status_code=400, message="Username already exists!")
     except:
         return jsonify(success=False, status_code=500, message="Operation Failed!")
@@ -155,11 +156,10 @@ def delete_user(user):
 @app.route("/weather", methods=['GET'])
 @authorize
 def get_weather(user):
-    weatherapi.getWeather(user.country, user.province, user.city)
     try:
-        db.session.commit()
-        return jsonify(success=True, status_code=200, message="Deletion Was Successful!")
-    except Exception:
+        data = weatherapi.getWeather(user.country, user.province, user.city)
+        return jsonify(success=True, status_code=200, data=data)
+    except:
         return jsonify(success=False, status_code=500, message="Operation Failed!")
 
 
