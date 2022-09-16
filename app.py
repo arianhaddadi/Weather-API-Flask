@@ -1,3 +1,4 @@
+import sqlalchemy.exc
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import exceptions
@@ -49,6 +50,24 @@ def authorize(f):
     decorator.__name__ = f.__name__
     return decorator
 
+
+def validate_form(*fields):
+    def wrapped(f):
+        def decorator():
+            form = request.form
+            try:
+                for field in fields:
+                    if form.get(field) is None:
+                        raise exceptions.BadRequest
+                return f()
+            except exceptions.BadRequest:
+                return jsonify(success=False, status_code=400, message="Bad Request! Check The Request Data!")
+
+        decorator.__name__ = f.__name__
+        return decorator
+    return wrapped
+
+
 class User(db.Model):
     username = db.Column(db.String, primary_key=True)
     password = db.Column(db.String, nullable=False)
@@ -57,6 +76,7 @@ class User(db.Model):
 
 
 @app.route("/user", methods=['POST'])
+@validate_form("username", "password", "country", "city")
 def add_user():
     username = request.form["username"]
     password = hashlib.sha256(request.form["password"].encode()).hexdigest()
@@ -67,30 +87,30 @@ def add_user():
     try:
         db.session.commit()
         return jsonify(success=True, status_code=200, message="Successfully Signed Up!")
-    except Exception as e:
-        if e.orig.pgcode == "23505":
-            return jsonify(success=False, status_code=400, message="Username already exists!")
-        else:
-            return jsonify(success=False, status_code=400, message="An Error Happened!")
+    except sqlalchemy.exc.IntegrityError:
+        return jsonify(success=False, status_code=400, message="Username already exists!")
+    except:
+        return jsonify(success=False, status_code=500, message="Operation Failed!")
 
 
 # Login
 @app.route("/login", methods=['POST'])
+@validate_form("username", "password")
 def login():
     username = request.form["username"]
     password = hashlib.sha256(request.form["password"].encode()).hexdigest()
     user = User.query.filter_by(username=username, password=password).first()
     if user is None:
         return jsonify(success=False, status_code=400, message="User doesn't exist! Try Again!")
-    else:
-        payload = {
-            "username": username,
-            "password": password,
-            "exp": datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(minutes=20)
-        }
-        key = "weath"
-        token = jwt.encode(payload, key)
-        return jsonify(success=True, status_code=200, message="Successfully Logged In!", jwt_token=token)
+
+    payload = {
+        "username": username,
+        "password": password,
+        "exp": datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(minutes=20)
+    }
+    key = "weath"
+    token = jwt.encode(payload, key)
+    return jsonify(success=True, status_code=200, message="Successfully Logged In!", jwt_token=token)
 
 
 # Update Location
