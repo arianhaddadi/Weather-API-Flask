@@ -70,6 +70,7 @@ def validate_form(*fields):
         return decorator
     return wrapped
 
+
 # Define User Table
 class User(db.Model):
     username = db.Column(db.String, primary_key=True)
