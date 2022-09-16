@@ -1,6 +1,7 @@
-import sqlalchemy.exc
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from weather import WeatherAPI as weatherapi
+import sqlalchemy.exc
 import exceptions
 import json
 import hashlib
@@ -22,6 +23,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = f"postgresql://{username}:{password}@loc
 db = SQLAlchemy(app)
 
 
+# Check JWT Token's Validity
 def authorize(f):
     def decorator():
         try:
@@ -51,6 +53,7 @@ def authorize(f):
     return decorator
 
 
+# Check the existence of Required Field Data in Request
 def validate_form(*fields):
     def wrapped(f):
         def decorator():
@@ -67,7 +70,7 @@ def validate_form(*fields):
         return decorator
     return wrapped
 
-
+# Define User Table
 class User(db.Model):
     username = db.Column(db.String, primary_key=True)
     password = db.Column(db.String, nullable=False)
@@ -141,6 +144,18 @@ def update_location(user):
 @authorize
 def delete_user(user):
     db.session.delete(user)
+    try:
+        db.session.commit()
+        return jsonify(success=True, status_code=200, message="Deletion Was Successful!")
+    except Exception:
+        return jsonify(success=False, status_code=500, message="Operation Failed!")
+
+
+# Get Weather Information
+@app.route("/weather", methods=['GET'])
+@authorize
+def get_weather(user):
+    weatherapi.getWeather(user.country, user.province, user.city)
     try:
         db.session.commit()
         return jsonify(success=True, status_code=200, message="Deletion Was Successful!")
