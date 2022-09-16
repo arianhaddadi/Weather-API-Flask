@@ -46,6 +46,7 @@ def authorize(f):
         except exceptions.BadRequest:
             return jsonify(success=False, status_code=400, message="Bad Request! Check The Request Data!")
 
+    decorator.__name__ = f.__name__
     return decorator
 
 class User(db.Model):
@@ -102,10 +103,24 @@ def update_location(user):
         user.country = new_country
     if new_city is not None:
         user.city = new_city
-    db.session.commit()
-    return jsonify(success=True, status_code=200, message="Update Was Successful!")
+
+    try:
+        db.session.commit()
+        return jsonify(success=True, status_code=200, message="Update Was Successful!")
+    except Exception:
+        return jsonify(success=False, status_code=500, message="Operation Failed!")
+
 
 # Delete User
+@app.route("/user", methods=['DELETE'])
+@authorize
+def delete_user(user):
+    db.session.delete(user)
+    try:
+        db.session.commit()
+        return jsonify(success=True, status_code=200, message="Deletion Was Successful!")
+    except Exception:
+        return jsonify(success=False, status_code=500, message="Operation Failed!")
 
 
 if __name__ == "__main__":
