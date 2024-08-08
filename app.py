@@ -18,7 +18,8 @@ username = conf["username"]
 password = conf["password"]
 db_name = conf["db_name"]
 
-app.config["SQLALCHEMY_DATABASE_URI"] = f"postgresql://{username}:{password}@localhost:5432/{db_name}"
+app.config["SQLALCHEMY_DATABASE_URI"] = \
+    f"postgresql://{username}:{password}@localhost:5432/{db_name}"
 
 db = SQLAlchemy(app)
 
@@ -43,11 +44,14 @@ def authorize(f):
 
             return f(user)
         except jwt.exceptions.ExpiredSignatureError:
-            return jsonify(success=False, status_code=401, message="Token Expired! Please Login Again!")
+            return jsonify(success=False, status_code=401,
+                           message="Token Expired! Please Login Again!")
         except jwt.exceptions.InvalidTokenError:
-            return jsonify(success=False, status_code=401, message="Token Invalid!")
+            return jsonify(success=False, status_code=401,
+                           message="Token Invalid!")
         except exceptions.BadRequest:
-            return jsonify(success=False, status_code=400, message="Bad Request! Check The Request Data!")
+            return jsonify(success=False, status_code=400,
+                           message="Bad Request! Check The Request Data!")
 
     decorator.__name__ = f.__name__
     return decorator
@@ -64,10 +68,12 @@ def validate_form(*fields):
                         raise exceptions.BadRequest
                 return f()
             except exceptions.BadRequest:
-                return jsonify(success=False, status_code=400, message="Bad Request! Check The Request Data!")
+                return jsonify(success=False, status_code=400,
+                               message="Bad Request! Check The Request Data!")
 
         decorator.__name__ = f.__name__
         return decorator
+
     return wrapped
 
 
@@ -88,15 +94,19 @@ def add_user():
     country = request.form["country"]
     city = request.form["city"]
     province = request.form["province"]
-    new_user = User(username=username, password=password, country=country, province=province, city=city)
+    new_user = User(username=username, password=password, country=country,
+                    province=province, city=city)
     db.session.add(new_user)
     try:
         db.session.commit()
-        return jsonify(success=True, status_code=200, message="Successfully Signed Up!")
-    except sqlalchemy.exc.IntegrityError as e:
-        return jsonify(success=False, status_code=400, message="Username already exists!")
+        return jsonify(success=True, status_code=200,
+                       message="Successfully Signed Up!")
+    except sqlalchemy.exc.IntegrityError:
+        return jsonify(success=False, status_code=400,
+                       message="Username already exists!")
     except:
-        return jsonify(success=False, status_code=500, message="Operation Failed!")
+        return jsonify(success=False, status_code=500,
+                       message="Operation Failed!")
 
 
 # Login
@@ -107,16 +117,19 @@ def login():
     password = hashlib.sha256(request.form["password"].encode()).hexdigest()
     user = User.query.filter_by(username=username, password=password).first()
     if user is None:
-        return jsonify(success=False, status_code=400, message="User doesn't exist! Try Again!")
+        return jsonify(success=False, status_code=400,
+                       message="User doesn't exist! Try Again!")
 
     payload = {
         "username": username,
         "password": password,
-        "exp": datetime.datetime.now(tz=datetime.timezone.utc) + datetime.timedelta(minutes=20)
+        "exp": datetime.datetime.now(
+            tz=datetime.timezone.utc) + datetime.timedelta(minutes=20)
     }
     key = "weath"
     token = jwt.encode(payload, key)
-    return jsonify(success=True, status_code=200, message="Successfully Logged In!", jwt_token=token)
+    return jsonify(success=True, status_code=200,
+                   message="Successfully Logged In!", jwt_token=token)
 
 
 # Update Location
@@ -136,9 +149,11 @@ def update_location(user):
 
     try:
         db.session.commit()
-        return jsonify(success=True, status_code=200, message="Update Was Successful!")
+        return jsonify(success=True, status_code=200,
+                       message="Update Was Successful!")
     except Exception:
-        return jsonify(success=False, status_code=500, message="Operation Failed!")
+        return jsonify(success=False, status_code=500,
+                       message="Operation Failed!")
 
 
 # Delete User
@@ -148,9 +163,11 @@ def delete_user(user):
     db.session.delete(user)
     try:
         db.session.commit()
-        return jsonify(success=True, status_code=200, message="Deletion Was Successful!")
+        return jsonify(success=True, status_code=200,
+                       message="Deletion Was Successful!")
     except Exception:
-        return jsonify(success=False, status_code=500, message="Operation Failed!")
+        return jsonify(success=False, status_code=500,
+                       message="Operation Failed!")
 
 
 # Get Weather Information
@@ -161,7 +178,8 @@ def get_weather(user):
         data = weatherapi.getWeather(user.country, user.province, user.city)
         return jsonify(success=True, status_code=200, data=data)
     except:
-        return jsonify(success=False, status_code=500, message="Operation Failed!")
+        return jsonify(success=False, status_code=500,
+                       message="Operation Failed!")
 
 
 if __name__ == "__main__":

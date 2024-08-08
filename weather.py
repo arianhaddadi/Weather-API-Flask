@@ -5,7 +5,6 @@ from bs4 import BeautifulSoup
 
 
 class WeatherAPI:
-
     @staticmethod
     def getWeather(country, province, city):
         soup = WeatherAPI.getSoup(country, province, city)
@@ -26,7 +25,8 @@ class WeatherAPI:
 
     @staticmethod
     def getCode(soup):
-        data = soup.find("body", {"class": "no-default-background"}).find("script").text
+        data = soup.find("body", {"class": "no-default-background"}).find(
+            "script").text
         index = data.find("7Days: ")
         return data[index + 7:-2].strip()
 
@@ -38,18 +38,24 @@ class WeatherAPI:
         data = dict()
         units = received_data["display"]["unit"]
         observation = received_data["observation"]
-        data["temperature"] = f"{observation['temperature']} °{units['temperature']}"
-        data["feelsLike"] = f"{observation['feelsLike']} °{units['temperature']}"
-        data["visibility"] = f"{observation['visibility']} {units['visibility']}"
-        data["wind"] = f"{observation['wind']['speed']} {observation['wind']['direction']} {units['wind']}"
-        data["humidity"] = f"{observation['relativeHumidity']}{units['relativeHumidity']}"
-        data["pressure"] = f"{observation['pressure']['value']} {units['pressure']}"
+        data["temperature"] = (f"{observation['temperature']} "
+                               f"°{units['temperature']}")
+
+        data["feelsLike"] = (f"{observation['feelsLike']} "
+                             f"°{units['temperature']}")
+
+        data["visibility"] = (f"{observation['visibility']} "
+                              f"{units['visibility']}")
+
+        data["wind"] = (f"{observation['wind']['speed']} "
+                        f"{observation['wind']['direction']} {units['wind']}")
+
+        data["humidity"] = (f"{observation['relativeHumidity']}"
+                            f"{units['relativeHumidity']}")
+
+        data["pressure"] = (f"{observation['pressure']['value']} "
+                            f"{units['pressure']}")
 
         return data
 
-
-# Weather.getWeather("Iran, Islamic Republic of", "azarbayjan-e-sharqi", "tabriz")
 # Weather.getWeather("canada", "ontario", "toronto")
-
-
-
