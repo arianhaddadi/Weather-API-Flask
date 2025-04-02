@@ -1,6 +1,6 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response
 from flask_sqlalchemy import SQLAlchemy
-from weather import WeatherAPI as weatherapi
+from weather import WeatherAPI
 import sqlalchemy.exc
 import exceptions
 import json
@@ -25,8 +25,8 @@ db = SQLAlchemy(app)
 
 
 # Check JWT Token's Validity
-def authorize(f):
-    def decorator():
+def authorize(func):
+    def wrapper():
         try:
             username = request.args.get("username")
             token = request.headers.environ.get("HTTP_AUTHORIZATION")
@@ -42,7 +42,7 @@ def authorize(f):
             if user is None or token_decoded["password"] != user.password:
                 raise jwt.exceptions.InvalidTokenError
 
-            return f(user)
+            return func(user)
         except jwt.exceptions.ExpiredSignatureError:
             return jsonify(success=False, status_code=401,
                            message="Token Expired! Please Login Again!")
@@ -53,28 +53,28 @@ def authorize(f):
             return jsonify(success=False, status_code=400,
                            message="Bad Request! Check The Request Data!")
 
-    decorator.__name__ = f.__name__
-    return decorator
+    wrapper.__name__ = func.__name__
+    return wrapper
 
 
 # Check the existence of Required Field Data in Request
 def validate_form(*fields):
-    def wrapped(f):
-        def decorator():
+    def decorator(func):
+        def wrapper():
             form = request.form
             try:
                 for field in fields:
                     if form.get(field) is None:
                         raise exceptions.BadRequest
-                return f()
+                return func()
             except exceptions.BadRequest:
                 return jsonify(success=False, status_code=400,
                                message="Bad Request! Check The Request Data!")
 
-        decorator.__name__ = f.__name__
-        return decorator
+        wrapper.__name__ = func.__name__
+        return wrapper
 
-    return wrapped
+    return decorator
 
 
 # Define User Table
@@ -88,7 +88,7 @@ class User(db.Model):
 
 @app.route("/user", methods=['POST'])
 @validate_form("username", "password", "country", "city", "province")
-def add_user():
+def add_user() -> Response:
     username = request.form["username"]
     password = hashlib.sha256(request.form["password"].encode()).hexdigest()
     country = request.form["country"]
@@ -104,15 +104,15 @@ def add_user():
     except sqlalchemy.exc.IntegrityError:
         return jsonify(success=False, status_code=400,
                        message="Username already exists!")
-    except:
+    except Exception as e:
         return jsonify(success=False, status_code=500,
-                       message="Operation Failed!")
+                       message=f"Operation Failed! Exception: {e}")
 
 
 # Login
 @app.route("/login", methods=['POST'])
 @validate_form("username", "password")
-def login():
+def login() -> Response:
     username = request.form["username"]
     password = hashlib.sha256(request.form["password"].encode()).hexdigest()
     user = User.query.filter_by(username=username, password=password).first()
@@ -135,7 +135,7 @@ def login():
 # Update Location
 @app.route("/user", methods=['PUT'])
 @authorize
-def update_location(user):
+def update_location(user: User) -> Response:
     new_city = request.form.get("city")
     new_province = request.form.get("province")
     new_country = request.form.get("country")
@@ -151,35 +151,35 @@ def update_location(user):
         db.session.commit()
         return jsonify(success=True, status_code=200,
                        message="Update Was Successful!")
-    except Exception:
+    except Exception as e:
         return jsonify(success=False, status_code=500,
-                       message="Operation Failed!")
+                       message=f"Operation Failed! Exception: {e}")
 
 
 # Delete User
 @app.route("/user", methods=['DELETE'])
 @authorize
-def delete_user(user):
+def delete_user(user: User) -> Response:
     db.session.delete(user)
     try:
         db.session.commit()
         return jsonify(success=True, status_code=200,
                        message="Deletion Was Successful!")
-    except Exception:
+    except Exception as e:
         return jsonify(success=False, status_code=500,
-                       message="Operation Failed!")
+                       message=f"Operation Failed! Exception: {e}")
 
 
 # Get Weather Information
 @app.route("/weather", methods=['GET'])
 @authorize
-def get_weather(user):
+def get_weather(user: User) -> Response:
     try:
-        data = weatherapi.getWeather(user.country, user.province, user.city)
+        data = WeatherAPI.getWeather(user.country, user.province, user.city)
         return jsonify(success=True, status_code=200, data=data)
-    except:
+    except Exception as e:
         return jsonify(success=False, status_code=500,
-                       message="Operation Failed!")
+                       message=f"Operation Failed! Exception: {e}")
 
 
 if __name__ == "__main__":

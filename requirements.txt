@@ -4,3 +4,4 @@ sqlalchemy
 pycountry
 jwt
 beautifulsoup4
+requests
